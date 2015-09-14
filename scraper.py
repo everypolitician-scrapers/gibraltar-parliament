@@ -84,14 +84,24 @@ for member in members:
     name, honorific_suffix = name_and_suffixes_re.search(name).groups()
     honorific_suffix = honorific_suffix.strip().replace(',', '').replace('.', '')
     honorific_prefix, name = name_and_prefixes_re.search(name).groups()
-    name_lower = name.replace('.', '').lower()
-    if name_lower in member_dict:
-        # We guess two people are the same if their names match.
-        id_ = member_dict[name_lower]
+    # strip dots out of all names. Sorry
+    name = name.replace('.', '')
+    # we mostly do this for JJ Bossano, whose name appears various different ways
+    name = re.sub(r"^([A-Z])([A-Z]) ", r"\1 \2 ", name)
+    # strip out middle initials; lowercase
+    simple_name = re.sub(r"^(.+? )(?:[A-Z] )+", r"\1", name).lower()
+    if simple_name in member_dict:
+        # We guess two people are the same if their names appear to match...
+        id_, stored_name = member_dict[simple_name]
+        if len(stored_name) == len(name) and name.lower() != stored_name:
+            # but not if they have mismatching middle initials
+            counter += 1
+            id_ = counter
+            member_dict[simple_name] = id_, name.lower()
     else:
         counter += 1
         id_ = counter
-        member_dict[name_lower] = id_
+        member_dict[simple_name] = id_, name.lower()
     data_list.append({
         "id": id_,
         "name": name,
