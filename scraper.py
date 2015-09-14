@@ -17,23 +17,34 @@ url = "http://www.parliament.gi/history/composition-of-parliament"
 r = scraperwiki.scrape(url)
 soup = bs4.BeautifulSoup(r, "html.parser")
 
-term_re = re.compile(r"(?:Footnote:|([^ ]+ (?:House of Assembly|Gibraltar Parliament)) \((.*?) . (.*?)\))")
+suffixes = ["CBE", "CMG", "ED", "JP", "MA", "MBE", "MVO", "OBE", "QC", "RD"]
+name_and_suffixes_re = re.compile('^(.*?),?((?: (?:{}),?)*)$'.format('|'.join(''.join(y + '\.?' for y in x) for x in suffixes)))
+
+prefixes = ["Dr\.?", "Lt\.? Col\.?", "Lt-Col", "Major", "Miss", "Mrs", "Sir"]
+name_and_prefixes_re = re.compile('^(?:({}) )?(.*)$'.format('|'.join(prefixes)))
+
+term_re = re.compile(r"^(?:Footnote:|([^ ]+ (?:House of Assembly|Gibraltar Parliament)) \((.*?) . (.*?)\))")
 position_re = re.compile(r"(?:GOVERNMENT|OPPOSITION|SPEAKER|CLERK)")
 name_re = re.compile(r"The Hon .*$")
-name_and_role_re = re.compile(ur".*?The Hon (.*?)(?: (?:-|–) (.*))?$")
-name_and_role_first_term_re = re.compile(r"(.*?)(?:, ((?:Minister|Chief Minister|Attorney General|Financial & Development Secretary|Leader).*))?$")
+name_and_role_re = re.compile(ur"^The Hon (.*?)(?: (?:-|–) (.*))?$")
+name_and_role_first_term_re = re.compile(r"^The Hon (.*?)(?:, ((?:Minister|Chief Minister|Attorney General|Financial & Development Secretary|Leader).*))?$")
 
 terms = soup.find_all(text=term_re)
 id_ = 0
 terms_list = []
 for term in terms:
-    term_name, start_date, end_date = term_re.match(term).groups()
+    term_name, start_date, end_date = term_re.search(term).groups()
     if not term_name:
         # this is just here to deal with the weird bit in
         # the Eighth House of Assembly
         continue
     start_date = parse_date(start_date)
     end_date = parse_date(end_date)
+    if term_name == "Tenth Gibraltar Parliament":
+        # this is to deal with the name change from
+        # House of Assembly to Gibraltar Parliament
+        terms_list[-1]["end_date"] = end_date
+        continue
     id_ += 1
     terms_list.append({
         "id": id_,
@@ -47,6 +58,8 @@ terms_dict = {x["name"]: x for x in terms_list}
 
 members = soup.find_all(text=name_re)
 
+counter = 0
+member_dict = {}
 data_list = []
 for member in members:
     position = member.find_previous(text=position_re)
@@ -57,20 +70,40 @@ for member in members:
         # this is just here to deal with the weird bit in
         # the Eighth House of Assembly
         continue
-    term_name = term_re.match(parliament).group(1)
+    if parliament.startswith("Tenth Gibraltar Parliament"):
+        # this is to deal with the name change from
+        # House of Assembly to Gibraltar Parliament
+        continue
+    term_name = term_re.search(parliament).group(1)
     term_id = terms_dict[term_name]["id"]
-    name, role = name_and_role_re.match(member.strip()).groups()
     if term_name == "First House of Assembly":
-        name, role = name_and_role_first_term_re.match(name).groups()
+        # The name and role are split by a comma in the first assembly.
+        name, role = name_and_role_first_term_re.search(member.strip()).groups()
+    else:
+        name, role = name_and_role_re.search(member.strip()).groups()
+    name, honorific_suffix = name_and_suffixes_re.search(name).groups()
+    honorific_suffix = honorific_suffix.strip().replace(',', '').replace('.', '')
+    honorific_prefix, name = name_and_prefixes_re.search(name).groups()
+    name_lower = name.replace('.', '').lower()
+    if name_lower in member_dict:
+        # We guess two people are the same if their names match.
+        id_ = member_dict[name_lower]
+    else:
+        counter += 1
+        id_ = counter
+        member_dict[name_lower] = id_
     data_list.append({
-        "name": name.strip(),
+        "id": id_,
+        "name": name,
         "area": None,  # we don't have this data
         "group": None,  # we don't have this data
         "term": term_id,
         "start_date": "",
         "end_date": "",
+        "honorific_prefix": honorific_prefix,
+        "honorific_suffix": honorific_suffix,
         "role": role.strip() if role else None,
         "side": position.title(),
     })
 
-scraperwiki.sqlite.save(["name", "term"], data_list, "data")
+scraperwiki.sqlite.save(["id", "term"], data_list, "data")
