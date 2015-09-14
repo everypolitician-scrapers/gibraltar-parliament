@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 import re
 
 import bs4
 import scraperwiki
 
+
+def parse_date(d):
+    if d == "to date":
+        return None
+    if len(d) == 4:
+        return d
+    return str(datetime.strptime(d, "%d %B %Y").date())
 
 url = "http://www.parliament.gi/history/composition-of-parliament"
 r = scraperwiki.scrape(url)
@@ -24,6 +32,8 @@ for term in terms:
         # this is just here to deal with the weird bit in
         # the Eighth House of Assembly
         continue
+    start_date = parse_date(start_date)
+    end_date = parse_date(end_date)
     id_ += 1
     terms_list.append({
         "id": id_,
