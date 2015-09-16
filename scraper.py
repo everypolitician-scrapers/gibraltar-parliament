@@ -13,6 +13,48 @@ def parse_date(d):
         return d
     return str(datetime.strptime(d, "%d %B %Y").date())
 
+def merge_members(data_list):
+    # strip out middle initials
+    abbreviate = lambda x: re.sub(r"^(.+? )(?:[A-Z] )+", r"\1", x)
+
+    if 'data' in scraperwiki.sqlite.show_tables():
+        output_list = scraperwiki.sqlite.select("* FROM `data`")
+        for y in output_list:
+            y['short_name'] = abbreviate(y['name'])
+    else:
+        output_list = []
+    initial_len = len(output_list)
+
+    id_ = 0
+    for x in data_list:
+        x = dict(x)
+        x['short_name'] = abbreviate(x['name'])
+        for y in reversed(output_list):
+            if x['name'] == y['name']:
+                x['id'] = y['id']
+                output_list.append(x)
+                break
+            if x['short_name'] == y['short_name']:
+                if x['short_name'] == x['name'] or y['short_name'] == y['name']:
+                    print "{x_name} (term {x_term}) is probably the same person as {y_name} (term {y_term})".format(
+                        x_name=x['name'],
+                        x_term=x['term'],
+                        y_name=y['name'],
+                        y_term=y['term'],
+                    )
+                    x['id'] = y['id']
+                    output_list.append(x)
+                    break
+        if 'id' not in x:
+            id_ += 1
+            x['id'] = id_
+            output_list.append(x)
+
+    for y in output_list:
+        del y['short_name']
+
+    return output_list[initial_len:]
+
 url = "http://www.parliament.gi/history/composition-of-parliament"
 r = scraperwiki.scrape(url)
 soup = bs4.BeautifulSoup(r, "html.parser")
@@ -58,8 +100,6 @@ terms_dict = {x["name"]: x for x in terms_list}
 
 members = soup.find_all(text=name_re)
 
-counter = 0
-member_dict = {}
 data_list = []
 for member in members:
     position = member.find_previous(text=position_re)
@@ -84,27 +124,13 @@ for member in members:
     name, honorific_suffix = name_and_suffixes_re.search(name).groups()
     honorific_suffix = honorific_suffix.strip().replace(',', '').replace('.', '')
     honorific_prefix, name = name_and_prefixes_re.search(name).groups()
-    # strip dots out of all names; titlecase. Sorry
-    name = name.replace('.', '').title()
-    # we mostly do this for JJ Bossano, whose name appears various different ways
+    # strip dots out of all names. Sorry
+    name = name.replace('.', '')
+    # we mostly do this for JJ Bossano, whose name appears
+    # various different ways
     name = re.sub(r"^([A-Z])([A-Z]) ", r"\1 \2 ", name)
-    # strip out middle initials
-    simple_name = re.sub(r"^(.+? )(?:[A-Z] )+", r"\1", name)
-    if simple_name in member_dict:
-        # We guess two people are the same if their names appear to match...
-        id_, stored_name = member_dict[simple_name]
-        if len(stored_name) == len(name) and name != stored_name:
-            # but not if they have mismatching middle initials
-            counter += 1
-            id_ = counter
-            member_dict[simple_name] = id_, name
-    else:
-        counter += 1
-        id_ = counter
-        member_dict[simple_name] = id_, name
     data_list.append({
-        "id": id_,
-        "name": name,
+        "name": name.title(),
         "area": None,  # we don't have this data
         "group": None,  # we don't have this data
         "term": term_id,
@@ -115,5 +141,7 @@ for member in members:
         "role": role.strip() if role else None,
         "side": position.title(),
     })
+
+data_list = merge_members(data_list)
 
 scraperwiki.sqlite.save(["id", "term"], data_list, "data")
