@@ -43,6 +43,7 @@ def merge_members(data_list):
                         y_term=y['term'],
                     )
                     x['id'] = y['id']
+                    x['name'] = y['name']
                     output_list.append(x)
                     break
         if 'id' not in x:
