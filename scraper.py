@@ -61,10 +61,10 @@ r = scraperwiki.scrape(url)
 soup = bs4.BeautifulSoup(r, "html.parser")
 
 suffixes = ["CBE", "CMG", "ED", "JP", "MA", "MBE", "MVO", "OBE", "QC", "RD"]
-name_and_suffixes_re = re.compile('^(.*?),?((?: (?:{}),?)*)$'.format('|'.join(''.join(y + '\.?' for y in x) for x in suffixes)))
+name_and_suffixes_re = re.compile(r"^(.*?),?((?: (?:{}),?)*)$".format('|'.join(''.join(y + '\.?' for y in x) for x in suffixes)))
 
 prefixes = ["Dr\.?", "Lt\.? Col\.?", "Lt-Col", "Major", "Miss", "Mrs", "Sir"]
-name_and_prefixes_re = re.compile('^(?:({}) )?(.*)$'.format('|'.join(prefixes)))
+name_and_prefixes_re = re.compile(r"^(?:({}) )?(.*)$".format('|'.join(prefixes)))
 
 term_re = re.compile(r"^(?:Footnote:|([^ ]+ (?:House of Assembly|Gibraltar Parliament)) \((.*?) . (.*?)\))")
 position_re = re.compile(r"(?:GOVERNMENT|OPPOSITION|SPEAKER|CLERK)")
