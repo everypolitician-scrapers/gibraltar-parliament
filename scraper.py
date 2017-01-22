@@ -7,7 +7,7 @@ import scraperwiki
 
 
 def parse_date(d):
-    if d == "to date":
+    if d == "date":
         return None
     if len(d) == 4:
         return d
@@ -63,10 +63,10 @@ soup = bs4.BeautifulSoup(r, "html.parser")
 suffixes = ["CBE", "CMG", "ED", "JP", "MA", "MBE", "MVO", "OBE", "QC", "RD"]
 name_and_suffixes_re = re.compile(r"^(.*?),?((?: (?:{}),?)*)$".format('|'.join(''.join(y + '\.?' for y in x) for x in suffixes)))
 
-prefixes = ["Dr\.?", "Lt\.? Col\.?", "Lt-Col", "Major", "Miss", "Mrs", "Sir"]
+prefixes = ["Dr\.?", "Lt\.? Col\.?", "Lt-Col", "Major", "Miss", "Mrs", "Ms", "Sir"]
 name_and_prefixes_re = re.compile(r"^(?:({}) )?(.*)$".format('|'.join(prefixes)))
 
-term_re = re.compile(r"^(?:Footnote:|([^ ]+ (?:House of Assembly|Gibraltar Parliament)) \((.*?) . (.*?)\))")
+term_re = re.compile(r"^(?:Footnote:|([^ ]+ (?:House of Assembly|Gibraltar Parliament)) \((.*?) (?:.|to) (.*?)\))")
 position_re = re.compile(r"(?:GOVERNMENT|OPPOSITION|SPEAKER|CLERK)")
 name_re = re.compile(r"The Hon .*$")
 name_and_role_re = re.compile(ur"^The Hon (.*?)(?: (?:-|–) (.*))?$")
