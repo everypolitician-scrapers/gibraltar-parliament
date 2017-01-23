@@ -121,7 +121,8 @@ for member in members:
         # The name and role are split by a comma in the first assembly.
         name, role = name_and_role_first_term_re.search(member.strip()).groups()
     else:
-        name, role = name_and_role_re.search(member.strip()).groups()
+        member = member.replace(u'\xa0', ' ').strip()
+        name, role = name_and_role_re.search(member).groups()
     name, honorific_suffix = name_and_suffixes_re.search(name).groups()
     honorific_suffix = honorific_suffix.strip().replace(',', '').replace('.', '')
     honorific_prefix, name = name_and_prefixes_re.search(name).groups()
