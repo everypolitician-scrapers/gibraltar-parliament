@@ -1,0 +1,18 @@
+GIT
+  remote: https://github.com/everypolitician/morph_scraper-database
+  revision: 780afa562b2452382adb6671aa4f5459c674e6b1
+  specs:
+    morph_scraper-database (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  morph_scraper-database!
+
+BUNDLED WITH
+   1.15.4
